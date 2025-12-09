@@ -1,18 +1,26 @@
 import os
+from aiohttp import web
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 from app.handler import handle
 from app.cache import Cache
-
+import aiohttp
 
 CACHE_SIZE = 10
-
-
 message_map = Cache(CACHE_SIZE)
 
 
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+PORT = int(os.getenv("PORT", 3000))  # Render автоматически передает PORT
+BASE_URL = os.getenv("BASE_URL")     # Render HTTPS URL, например https://class-time-bot.onrender.com
+
+
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Поддержка обычных и редактированных сообщений
     msg = update.message or update.edited_message
     if not msg or not msg.text:
         return
@@ -24,24 +32,64 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     bot_msg_id = message_map.get(user_id)
 
     if bot_msg_id:
-        # Редактируем уже отправленный ответ
         await context.bot.edit_message_text(
             chat_id=msg.chat_id,
             message_id=bot_msg_id,
             text=result,
-            parse_mode='HTML'
+            parse_mode="HTML"
         )
     else:
-        # Отправляем новый ответ и сохраняем его ID
-        sent_msg = await msg.reply_text(result, parse_mode='HTML')
-        message_map.set(user_id, sent_msg.message_id)
+        sent = await msg.reply_text(result, parse_mode="HTML")
+        message_map.set(user_id, sent.message_id)
+
+
+telegram_app = (
+    ApplicationBuilder()
+    .token(TELEGRAM_TOKEN)
+    .build()
+)
+
+telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
+telegram_app.add_handler(MessageHandler(filters.TEXT & filters.UpdateType.EDITED_MESSAGE, handle_user_message))
+
+
+async def webhook_handler(request: web.Request):
+    data = await request.json()
+    update = Update.de_json(data, telegram_app.bot)
+    await telegram_app.process_update(update)
+    return web.Response(text="OK")
+
+
+async def health(request):
+    return web.Response(text="OK")
+
+
+async def set_webhook():
+    url = f"{BASE_URL}/webhook"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook?url={url}") as resp:
+            result = await resp.json()
+            print("Set webhook result:", result)
+
+
+async def init():
+    await telegram_app.initialize()
+    await telegram_app.start()
+
+    # Поднимаем aiohttp
+    app = web.Application()
+    app.router.add_post("/webhook", webhook_handler)
+    app.router.add_get("/health", health)
+
+    # Автоустановка webhook
+    await set_webhook()
+
+    print(f"Webhook server running on {BASE_URL}/webhook")
+    return app
 
 
 def main():
-    app = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
-    app.add_handler(MessageHandler(filters.TEXT & filters.UpdateType.EDITED_MESSAGE, handle_user_message))
-    app.run_polling()
+    web.run_app(init(), host="0.0.0.0", port=PORT)
 
 
 if __name__ == "__main__":
