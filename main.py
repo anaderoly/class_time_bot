@@ -2,9 +2,14 @@ import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 from app.handler import handle
+from app.cache import Cache
 
-# user_message_id -> bot_message_id
-message_map = {}
+
+CACHE_SIZE = 10
+
+
+message_map = Cache(CACHE_SIZE)
+
 
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Поддержка обычных и редактированных сообщений
@@ -29,13 +34,15 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         # Отправляем новый ответ и сохраняем его ID
         sent_msg = await msg.reply_text(result, parse_mode='HTML')
-        message_map[user_id] = sent_msg.message_id
+        message_map.set(user_id, sent_msg.message_id)
+
 
 def main():
     app = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
     app.add_handler(MessageHandler(filters.TEXT & filters.UpdateType.EDITED_MESSAGE, handle_user_message))
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
