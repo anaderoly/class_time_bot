@@ -17,7 +17,7 @@ class LessonRecord:
     work_time_h: int
     lesson_num: int
     class_name: str
-    claas_time_h: float
+    class_time_h: float
 
 
 def df_to_records(df: pd.DataFrame, tg_user_id: int):
@@ -29,7 +29,7 @@ def df_to_records(df: pd.DataFrame, tg_user_id: int):
             work_time_h=row["total"],
             lesson_num=row["lesson"],
             class_name=row["class"],
-            claas_time_h=row["time"]
+            class_time_h=row["time"]
         ))
     return records
 
