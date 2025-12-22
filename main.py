@@ -8,6 +8,7 @@ from telegram.ext import (
     filters,
 )
 from app.handler import handle
+from app.persistance import insert_table, select_class_names
 from app.cache import Cache
 import aiohttp
 
@@ -16,8 +17,8 @@ message_map = Cache(CACHE_SIZE)
 
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-PORT = int(os.getenv("PORT", 3000))  # Render автоматически передает PORT
-BASE_URL = os.getenv("BASE_URL")     # Render HTTPS URL, например https://class-time-bot.onrender.com
+PORT = int(os.getenv("PORT", 3000))
+BASE_URL = os.getenv("BASE_URL")
 
 
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -25,11 +26,26 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not msg or not msg.text:
         return
 
-    user_text = msg.text
-    result = handle(user_text)
+    user_id = msg.from_user.id
+    user_msg_id = msg.message_id
+    bot_msg_id = message_map.get(user_msg_id)
 
-    user_id = msg.message_id
-    bot_msg_id = message_map.get(user_id)
+    user_text = msg.text
+    result, table = handle(user_text)
+    if table is not None:
+        try:
+            class_names = select_class_names(user_id, table["date"].astype("str").unique().tolist())
+            new_class_names = [c for c in table["class"].unique().tolist() if c not in class_names]
+            if new_class_names:
+                new_class_names_str = ", ".join(new_class_names)
+                result += "\n"
+                result += f"Найдены новые ученики: {new_class_names_str}"
+            try:
+                insert_table(table, user_id)
+            except Exception as e:
+                result = f"Ошибка сохранения: {e}"
+        except Exception as e:
+            result = f"Ошибка получения имен учеников: {e}"
 
     if bot_msg_id:
         await context.bot.edit_message_text(
@@ -40,7 +56,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
     else:
         sent = await msg.reply_text(result, parse_mode="HTML")
-        message_map.set(user_id, sent.message_id)
+        message_map.set(user_msg_id, sent.message_id)
 
 
 telegram_app = (

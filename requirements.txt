@@ -1,4 +1,5 @@
 numpy
 pandas
 aiohttp
+supabase
 python-telegram-bot

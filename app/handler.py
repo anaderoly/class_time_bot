@@ -127,10 +127,8 @@ def handle(text):
     try:
         df = handle_text(text)
         validate_df(df)
-        ans = prepare_report(df)
+        return prepare_report(df), df
     except (FormatError, LogicError) as e:
-        ans = str(e)
+        return str(e), None
     except Exception as e:
-        ans = f"Неизвестная ошибка: {e}"
-
-    return ans
+        return f"Неизвестная ошибка: {e}", None
