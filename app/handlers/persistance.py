@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from dataclasses import dataclass, asdict
 from supabase import create_client
+from datetime import date
 
 
 supabase = create_client(
@@ -43,3 +44,11 @@ def insert_table(df: pd.DataFrame, tg_user_id: int):
 def select_class_names(user_id: int, dates: list[str] = None):
     result = supabase.rpc("get_class_names", {"p_user_id": user_id, "p_exclude_dates": dates}).execute()
     return [r["class_name"] for r in result.data]
+
+
+def select_class_times(user_id: int, start_dt: date, stop_dt: date):
+    result = supabase.rpc(
+        "get_class_times",
+        {"p_user_id": user_id, "p_start_dt":  start_dt.isoformat(), "p_stop_dt": stop_dt.isoformat()}
+    ).execute()
+    return result.data
