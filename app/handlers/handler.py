@@ -43,9 +43,9 @@ def parse_time(line: str):
 @strip
 def parse_object(line: str):
     s = " ".join(line.split())
-    s = s[:-1].rstrip() if s.endswith("Ф") else s
-    s = s[:-1].rstrip() if s.endswith("М") else s
-    return s, s.lower().capitalize()
+    s = s[:-1] if s.endswith("Ф") else s
+    s = s[:-1] if s.endswith("М") else s
+    return s, s.strip().capitalize()
 
 
 def handle_text(text: str) -> pd.DataFrame:

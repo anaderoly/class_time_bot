@@ -10,6 +10,7 @@ from telegram.ext import (
 
 from app.router import route
 from app.tools.cache import Cache
+from app.tools.normalizer import normalize_text
 import aiohttp
 
 CACHE_SIZE = 10
@@ -30,9 +31,8 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_msg_id = msg.message_id
     bot_msg_id = message_map.get(user_msg_id)
 
-    user_text = msg.text
-
     try:
+        user_text = normalize_text(msg.text)
         result_text = route(user_text, user_id)
     except Exception as e:
         result_text = f"Ошибка запроса: {e}"
