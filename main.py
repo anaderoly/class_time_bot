@@ -10,7 +10,6 @@ from telegram.ext import (
 
 from app.router import route
 from app.tools.cache import Cache
-from app.tools.normalizer import normalize_text
 import aiohttp
 
 CACHE_SIZE = 10
@@ -27,19 +26,16 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not msg or not msg.text:
         return
 
-    if normalize_text(msg.text) == "wake":
-        await context.bot.delete_message(chat_id=msg.chat_id, message_id=msg.message_id)
-        return
-
-    user_id = msg.from_user.id
     user_msg_id = msg.message_id
     bot_msg_id = message_map.get(user_msg_id)
 
     try:
-        user_text = normalize_text(msg.text)
-        result_text = route(user_text, user_id)
+        result_text = await route(msg, context)
     except Exception as e:
         result_text = f"Ошибка запроса: {e}"
+
+    if not result_text:
+        return
 
     if bot_msg_id:
         await context.bot.edit_message_text(

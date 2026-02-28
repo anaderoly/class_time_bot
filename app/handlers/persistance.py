@@ -52,3 +52,7 @@ def select_class_times(user_id: int, start_dt: date, stop_dt: date):
         {"p_user_id": user_id, "p_start_dt":  start_dt.isoformat(), "p_stop_dt": stop_dt.isoformat()}
     ).execute()
     return result.data
+
+
+def ping_db():
+    supabase.schema("pg_catalog").table("pg_class").select("oid").limit(1).execute()

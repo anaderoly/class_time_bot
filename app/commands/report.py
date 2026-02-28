@@ -6,6 +6,7 @@ from app.tools.round import stable_round
 
 
 REPORT_COMMAND = "Ученики"
+WAKE_COMMAND = "wake"
 ROUND = 2
 
 
