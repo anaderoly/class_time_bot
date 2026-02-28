@@ -27,6 +27,10 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not msg or not msg.text:
         return
 
+    if normalize_text(msg.text) == "wake":
+        await context.bot.delete_message(chat_id=msg.chat_id, message_id=msg.message_id)
+        return
+
     user_id = msg.from_user.id
     user_msg_id = msg.message_id
     bot_msg_id = message_map.get(user_msg_id)
