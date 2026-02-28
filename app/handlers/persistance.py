@@ -55,4 +55,4 @@ def select_class_times(user_id: int, start_dt: date, stop_dt: date):
 
 
 def ping_db():
-    supabase.schema("pg_catalog").table("pg_class").select("oid").limit(1).execute()
+    supabase.table("lessons").select("user_id").limit(1).execute()
